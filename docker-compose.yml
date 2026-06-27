@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # ─────────────────────────────────────────────────────────────────
+  # FastAPI Backend (Demo Mode - No External Deps)
+  # ─────────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: surakshanet-backend
+    ports:
+      - "8000:7860"
+    environment:
+      - DEMO_MOCK_MODE=true
+      - DATABASE_URL=postgresql://dummy:dummy@dummy:5432/dummy
+      - NEO4J_URI=neo4j+s://dummy
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=dummy
+      - GROQ_API_KEY=dummy
+      - UPSTASH_REDIS_URL=dummy
+      - HUGGINGFACE_API_KEY=dummy
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 7860 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────────────────────
+  # Note: Frontend is managed separately with `npm run dev`
+  # Use this docker-compose for backend development only
+  # ─────────────────────────────────────────────────────────────────
+
+volumes:
+  backend:

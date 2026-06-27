@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom theme variables — SurakshaNet dark mode */
+:root {
+  --color-verdict-green: #10b981;
+  --color-verdict-amber: #f59e0b;
+  --color-verdict-red: #ef4444;
+  --color-actor-red: #dc2626;
+  --color-syndicate-purple: #9333ea;
+  --color-phone-slate: #64748b;
+  --color-bank-amber: #f59e0b;
+}
+
+/* Smooth global transitions */
+@layer base {
+  * {
+    @apply transition-colors duration-200;
+  }
+
+  /* Prevent layout shift on scrollbar appearance */
+  html {
+    overflow-y: scroll;
+  }
+
+  /* Typography smoothing */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Remove default input styles for consistent theming */
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+
+  /* Ensure buttons don't have default browser styles */
+  button {
+    @apply cursor-pointer;
+  }
+}
+
+/* Custom utility for gradient text */
+@layer utilities {
+  .gradient-text {
+    @apply bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  .glass-effect {
+    @apply backdrop-blur-md bg-opacity-10 border border-slate-500 border-opacity-30;
+  }
+
+  .smooth-spin {
+    animation: smooth-spin 1s linear infinite;
+  }
+
+  @keyframes smooth-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Prevent text selection on UI controls */
+  .no-select {
+    @apply select-none;
+  }
+
+  /* Ensure consistent focus states */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-950;
+  }
+}
+
+/* Scrollbar styling for webkit browsers */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.6);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.9);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-color: rgba(100, 116, 139, 0.6) rgba(15, 23, 42, 0.5);
+  scrollbar-width: thin;
+}
+
+/* vis-network canvas styles — ensure clean integration */
+.vis-network {
+  @apply rounded-lg border border-slate-700;
+}
+
+.vis-tooltip {
+  @apply !bg-slate-800 !border-slate-600 !text-slate-50 !rounded-lg !shadow-lg;
+}

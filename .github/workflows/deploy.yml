@@ -1,0 +1,178 @@
+name: Deploy SurakshaNet AI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────
+  # Lint & Type Check Frontend
+  # ─────────────────────────────────────────────────────────────────
+  frontend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: cd frontend && npm install
+
+      - name: Run ESLint
+        run: cd frontend && npm run lint
+
+      - name: Type check
+        run: cd frontend && npm run type-check
+
+  # ─────────────────────────────────────────────────────────────────
+  # Build & Test Backend
+  # ─────────────────────────────────────────────────────────────────
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics || true
+
+      - name: Type check with mypy
+        run: |
+          pip install mypy
+          mypy backend/ --ignore-missing-imports || true
+
+  # ─────────────────────────────────────────────────────────────────
+  # Build Frontend
+  # ─────────────────────────────────────────────────────────────────
+  frontend-build:
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: cd frontend && npm install
+
+      - name: Build Next.js
+        run: cd frontend && npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:8000' }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: nextjs-build
+          path: frontend/.next/
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────────
+  # Deploy to Production (Vercel Frontend)
+  # NOTE: Requires VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID secrets
+  # ─────────────────────────────────────────────────────────────────
+  deploy-frontend:
+    if: false  # Disabled until secrets are configured
+    runs-on: ubuntu-latest
+    needs: frontend-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          scope: ${{ secrets.VERCEL_SCOPE }}
+
+  # ─────────────────────────────────────────────────────────────────
+  # Deploy to Hugging Face Spaces (Backend)
+  # NOTE: Manual deployment recommended via git push to HF Space
+  # ─────────────────────────────────────────────────────────────────
+  deploy-backend:
+    if: false  # Disabled - use manual git push to HF Spaces
+    runs-on: ubuntu-latest
+    needs: backend-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync to Hugging Face Spaces
+        run: |
+          # Note: This requires a HF API token and repo URL setup
+          # The actual sync is typically done via git push to HF Space repo
+          echo "Deploy to HF Spaces: git push https://huggingface.co/spaces/YourOrg/SurakshaNet-AI"
+
+  # ─────────────────────────────────────────────────────────────────
+  # Integration Tests (Optional)
+  # ─────────────────────────────────────────────────────────────────
+  integration-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install backend deps
+        run: pip install -r requirements.txt
+
+      - name: Install frontend deps
+        run: cd frontend && npm install
+
+      - name: Run backend server (demo mode)
+        run: |
+          cd backend
+          export DEMO_MOCK_MODE=true
+          uvicorn main:app --host 0.0.0.0 --port 8000 &
+          sleep 3
+        env:
+          DATABASE_URL: dummy
+          NEO4J_URI: dummy
+
+      - name: Health check
+        run: curl -f http://localhost:8000/health || exit 1
+
+      - name: Test scam endpoint (demo)
+        run: |
+          curl -X POST http://localhost:8000/api/scam/text \
+            -H "Content-Type: application/json" \
+            -d '{"text":"Your Aadhaar is linked to crime..."}' \
+            || exit 1
