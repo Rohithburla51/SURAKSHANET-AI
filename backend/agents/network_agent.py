@@ -39,7 +39,7 @@ from typing import Any, Optional
 
 from groq import AsyncGroq, APITimeoutError, RateLimitError, APIStatusError
 from neo4j.exceptions import ClientError as Neo4jClientError
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from services.neo4j_graph import execute_nl_cypher, CypherResult
 from core.demo_responses import get_demo_network_response
@@ -121,6 +121,8 @@ class GraphEdge(BaseModel):
 
 class NetworkQueryResult(BaseModel):
     """Canonical output contract for the police network query pipeline."""
+
+    model_config = ConfigDict(protected_namespaces=())
 
     # ── Original input ──────────────────────────────────────────────────────
     question: str

@@ -39,13 +39,16 @@ import uuid
 from typing import Any, Optional
 
 from groq import AsyncGroq, APITimeoutError, RateLimitError, APIStatusError
-from pydantic import BaseModel, Field, field_validator, model_validator
-from sentence_transformers import SentenceTransformer
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 from services.database import pg_connection
 from core.demo_responses import get_demo_scam_response
 
 logger = logging.getLogger("surakshanet.scam_agent")
+
+# SentenceTransformer removed for HF Spaces compatibility
+# Will use simple keyword matching instead of embeddings
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Configuration
@@ -94,8 +97,7 @@ def _normalize_input(text: str) -> str:
 # Lazy-loaded singletons
 # ─────────────────────────────────────────────────────────────────────────────
 
-_groq_client:   Optional[AsyncGroq]           = None
-_embed_model:   Optional[SentenceTransformer] = None
+_groq_client: Optional[AsyncGroq] = None
 
 
 def _get_groq_client() -> AsyncGroq:
@@ -104,16 +106,6 @@ def _get_groq_client() -> AsyncGroq:
         _groq_client = AsyncGroq(api_key=GROQ_API_KEY, timeout=GROQ_TIMEOUT)
         logger.info("Groq async client initialised (model=%s)", GROQ_MODEL)
     return _groq_client
-
-
-def _get_embed_model() -> SentenceTransformer:
-    """Load the embedding model once; reuse across all requests."""
-    global _embed_model
-    if _embed_model is None:
-        logger.info("Loading sentence-transformer: %s …", EMBED_MODEL_NAME)
-        _embed_model = SentenceTransformer(EMBED_MODEL_NAME)
-        logger.info("Embedding model ready.")
-    return _embed_model
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -132,6 +124,8 @@ class ScamAnalysisResult(BaseModel):
     Canonical output contract for the scam analysis pipeline.
     This schema is shared with the FastAPI route layer and the frontend.
     """
+    
+    model_config = ConfigDict(protected_namespaces=())
 
     # ── Core verdict ─────────────────────────────────────────────────────────
     risk_score:  int   = Field(description="0 (safe) to 100 (certain scam)")
@@ -198,12 +192,10 @@ class ScamAnalysisResult(BaseModel):
 
 def _embed_text(text: str) -> list[float]:
     """
-    Synchronous embedding call wrapped for use in the async pipeline.
-    sentence_transformers is CPU-bound; runs in ~20–40 ms on the free tier.
+    Returns a zero vector — RAG is disabled on HF Spaces (no sentence-transformers).
+    The pipeline falls through to keyword-based context matching instead.
     """
-    model = _get_embed_model()
-    vector = model.encode(text, normalize_embeddings=True)
-    return vector.tolist()
+    return [0.0] * EMBED_DIMENSION
 
 
 # ─────────────────────────────────────────────────────────────────────────────
