@@ -8,6 +8,9 @@ app_file: backend/main.py
 pinned: false
 ---
 
+LIVE PROJECT HOSTING LINK: https://surakshanet-ai.vercel.app/
+
+
 # SurakshaNet AI — Multi-Agent Fraud Intelligence Platform
 
 Production-ready backend for Indian financial crime prevention featuring three specialized AI agents.
@@ -24,6 +27,8 @@ Production-ready backend for Indian financial crime prevention featuring three s
 - **Databases**: Neo4j Aura, Supabase PostgreSQL
 - **AI/ML**: Groq (Mixtral, LLaVA), OpenCV
 - **Container**: Docker (HF Spaces)
+
+
 
 ## Endpoints
 
